@@ -2,69 +2,6 @@ version: "3.8"
 
 services:
   # ===========================
-  # CASSANDRA CLUSTER - 3 NŒUDS
-  # ===========================
-  cassandra-node1:
-    image: cassandra:4.1
-    container_name: vpdf-cassandra-node1
-    hostname: cassandra-node1
-    ports:
-      - "9042:9042"
-    environment:
-      CASSANDRA_CLUSTER_NAME: VPDFCluster
-      CASSANDRA_SEEDS: cassandra-node1
-      CASSANDRA_DC: datacenter1
-      CASSANDRA_RACK: rack1
-      MAX_HEAP_SIZE: 512M
-      HEAP_NEWSIZE: 128M
-    volumes:
-      - cass1-data:/var/lib/cassandra
-      - ./cassandra/init.cql:/docker-entrypoint-initdb.d/init.cql
-    networks: [vpdf-net]
-    healthcheck:
-      test: ["CMD-SHELL", "cqlsh -e 'describe keyspaces' 2>/dev/null | grep vpdf"]
-      interval: 30s
-      timeout: 10s
-      retries: 15
-      start_period: 90s
-
-  cassandra-node2:
-    image: cassandra:4.1
-    container_name: vpdf-cassandra-node2
-    hostname: cassandra-node2
-    ports:
-      - "9043:9042"
-    environment:
-      CASSANDRA_CLUSTER_NAME: VPDFCluster
-      CASSANDRA_SEEDS: cassandra-node1
-      CASSANDRA_DC: datacenter1
-      CASSANDRA_RACK: rack2
-      MAX_HEAP_SIZE: 512M
-      HEAP_NEWSIZE: 128M
-    volumes:
-      - cass2-data:/var/lib/cassandra
-    networks: [vpdf-net]
-    depends_on: [cassandra-node1]
-
-  cassandra-node3:
-    image: cassandra:4.1
-    container_name: vpdf-cassandra-node3
-    hostname: cassandra-node3
-    ports:
-      - "9044:9042"
-    environment:
-      CASSANDRA_CLUSTER_NAME: VPDFCluster
-      CASSANDRA_SEEDS: cassandra-node1
-      CASSANDRA_DC: datacenter1
-      CASSANDRA_RACK: rack3
-      MAX_HEAP_SIZE: 512M
-      HEAP_NEWSIZE: 128M
-    volumes:
-      - cass3-data:/var/lib/cassandra
-    networks: [vpdf-net]
-    depends_on: [cassandra-node1]
-
-  # ===========================
   # SPRING BOOT BACKEND
   # ===========================
   vpdf-backend:
@@ -75,14 +12,12 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_CASSANDRA_CONTACT_POINTS: cassandra-node1,cassandra-node2,cassandra-node3
+      # Cluster Cassandra NATIF (LAN) : seeds / contact points
+      SPRING_CASSANDRA_CONTACT_POINTS: 192.168.150.123,192.168.150.107,192.168.150.102
       SPRING_CASSANDRA_PORT: 9042
       SPRING_CASSANDRA_KEYSPACE_NAME: vpdf
       SPRING_CASSANDRA_LOCAL_DATACENTER: datacenter1
     networks: [vpdf-net]
-    depends_on:
-      cassandra-node1:
-        condition: service_healthy
     restart: on-failure
 
   # ===========================
@@ -101,9 +36,7 @@ services:
     depends_on: [vpdf-backend]
 
 volumes:
-  cass1-data:
-  cass2-data:
-  cass3-data:
+  {}
 
 networks:
   vpdf-net:

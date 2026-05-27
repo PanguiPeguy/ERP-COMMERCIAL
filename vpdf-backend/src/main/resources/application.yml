@@ -3,14 +3,35 @@ server:
 
 spring:
   cassandra:
-    contact-points: ${SPRING_CASSANDRA_CONTACT_POINTS:localhost}
+    # Par défaut, on vise le cluster Cassandra NATIF (LAN).
+    # Les "contact points" sont des points d'entrée : le driver découvrira ensuite tout le cluster.
+    contact-points: ${SPRING_CASSANDRA_CONTACT_POINTS:192.168.150.123,192.168.150.107,192.168.150.102}
     port: ${SPRING_CASSANDRA_PORT:9042}
     keyspace-name: ${SPRING_CASSANDRA_KEYSPACE_NAME:vpdf}
     local-datacenter: ${SPRING_CASSANDRA_LOCAL_DATACENTER:datacenter1}
-    schema-action: create_if_not_exists
+    # Sur un cluster partagé (6 machines), évitez l'auto-création de schéma au démarrage de chaque dev.
+    # Préférez exécuter le script CQL versionné (voir cassandra/init.sql) lors des évolutions.
+    schema-action: none
+    request:
+      consistency: ${SPRING_CASSANDRA_CONSISTENCY:LOCAL_QUORUM}
 
 logging:
   level:
     com.vpdf: DEBUG
     com.datastax: WARN
     org.springframework.data.cassandra: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  cassandra:
+    # Profil docker/local : cluster Cassandra lancé via docker-compose (noms DNS du réseau Docker).
+    contact-points: ${SPRING_CASSANDRA_CONTACT_POINTS:cassandra-node1,cassandra-node2,cassandra-node3}
+    port: ${SPRING_CASSANDRA_PORT:9042}
+    keyspace-name: ${SPRING_CASSANDRA_KEYSPACE_NAME:vpdf}
+    local-datacenter: ${SPRING_CASSANDRA_LOCAL_DATACENTER:datacenter1}
+    schema-action: create_if_not_exists
+    request:
+      consistency: ${SPRING_CASSANDRA_CONSISTENCY:ONE}
