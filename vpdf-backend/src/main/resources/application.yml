@@ -1,0 +1,16 @@
+server:
+  port: 8080
+
+spring:
+  cassandra:
+    contact-points: ${SPRING_CASSANDRA_CONTACT_POINTS:localhost}
+    port: ${SPRING_CASSANDRA_PORT:9042}
+    keyspace-name: ${SPRING_CASSANDRA_KEYSPACE_NAME:vpdf}
+    local-datacenter: ${SPRING_CASSANDRA_LOCAL_DATACENTER:datacenter1}
+    schema-action: create_if_not_exists
+
+logging:
+  level:
+    com.vpdf: DEBUG
+    com.datastax: WARN
+    org.springframework.data.cassandra: INFO
