@@ -10,16 +10,16 @@ import org.springframework.data.cassandra.repository.config.EnableCassandraRepos
 @EnableCassandraRepositories(basePackages = "com.vpdf.repository")
 public class CassandraConfig extends AbstractCassandraConfiguration {
 
-    @Value("${spring.cassandra.contact-points:localhost}")
+    @Value("${spring.cassandra.contact-points:192.168.150.123,192.168.150.107,192.168.150.102}")
     private String contactPoints;
 
     @Value("${spring.cassandra.port:9042}")
     private int port;
 
-    @Value("${spring.cassandra.keyspace-name:vpdf}")
+    @Value("${spring.cassandra.keyspace-name:ventespleindefoin}")
     private String keyspaceName;
 
-    @Value("${spring.cassandra.local-datacenter:datacenter1}")
+    @Value("${spring.cassandra.local-datacenter:dc1}")
     private String localDatacenter;
 
     @Value("${spring.cassandra.schema-action:NONE}")
