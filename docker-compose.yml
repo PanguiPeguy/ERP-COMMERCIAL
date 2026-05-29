@@ -15,8 +15,8 @@ services:
       # Cluster Cassandra NATIF (LAN) : seeds / contact points
       SPRING_CASSANDRA_CONTACT_POINTS: 192.168.150.123,192.168.150.107,192.168.150.102
       SPRING_CASSANDRA_PORT: 9042
-      SPRING_CASSANDRA_KEYSPACE_NAME: vpdf
-      SPRING_CASSANDRA_LOCAL_DATACENTER: datacenter1
+      SPRING_CASSANDRA_KEYSPACE_NAME: ventespleindefoin
+      SPRING_CASSANDRA_LOCAL_DATACENTER: dc1
     networks: [vpdf-net]
     restart: on-failure
 
