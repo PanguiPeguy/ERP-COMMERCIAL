@@ -1,72 +1,96 @@
+# 🖥️ Configuration du Cluster Cassandra Natif (3 Nœuds)
+
 ## Objectif
 
-Former un cluster Cassandra **natif** sur **6 machines du LAN** avec :
+Connecter ensemble vos 3 machines sur le réseau local (LAN) pour former un cluster Apache Cassandra natif unique.
 
-- **1 DC** : `datacenter1`
-- **RF=3** pour le keyspace `vpdf`
-- **Seeds** : `192.168.150.123`, `192.168.150.107`, `192.168.150.102`
+**Topologie du Cluster (`dc1`) :**
+- **Nœud 1 (Seed)** : `192.168.150.123`
+- **Nœud 2 (Seed)** : `192.168.150.107`
+- **Nœud 3** : `192.168.150.102`
 
-IP des nœuds (LAN) : `192.168.150.102`, `192.168.150.103`, `192.168.150.104`, `192.168.150.105`, `192.168.150.106`, `192.168.150.107`, `192.168.150.123`
+Facteur de réplication (RF) : `3` (Chaque donnée sera écrite sur les 3 nœuds pour une tolérance aux pannes maximale).
 
-> Note : la liste ci-dessus contient 7 IP dans votre message. Assurez-vous du nombre exact de nœuds (6 attendus) et mappez 1 IP ↔ 1 machine.
+---
 
-## Prérequis réseau
+## 🔒 1. Prérequis Réseau (Pare-feu)
 
-Ouvrir entre tous les nœuds (pare-feu) :
+Sur les **3 machines**, assurez-vous que les ports suivants sont ouverts :
+- **7000/tcp** : Communication interne du cluster Cassandra (Gossip).
+- **9042/tcp** : Port de connexion client (cqlsh, Spring Boot, etc.).
+- **7199/tcp** : (Optionnel) Administration via `nodetool`.
 
-- **7000/tcp** (inter-nœuds)
-- **9042/tcp** (clients CQL / Spring)
-- (optionnel admin) **7199/tcp** (JMX / nodetool)
+Vérifiez que vos 3 machines communiquent avec la commande `ping 192.168.150.x` depuis chacune d'entre elles.
 
-Vérifier que chaque nœud peut joindre les autres sur le LAN (ping + ports).
+---
 
-## Configuration Cassandra (sur chaque machine)
+## ⚙️ 2. Configuration (`cassandra.yaml`)
 
-Fichier (selon installation) : souvent `/etc/cassandra/cassandra.yaml`.
+Sur **chacune** des 3 machines, éditez le fichier `cassandra.yaml` (généralement situé dans `/etc/cassandra/cassandra.yaml` ou `conf/cassandra.yaml`). 
 
-À définir de manière cohérente :
+Les champs suivants doivent être configurés exactement ainsi :
 
-- **`cluster_name`** : identique partout (ex. `VPDFCluster`)
-- **`endpoint_snitch`** : recommandé `GossipingPropertyFileSnitch`
-- **Seeds** (même liste sur tous les nœuds) :
-  - `192.168.150.123,192.168.150.107,192.168.150.102`
+### A. Paramètres Communs (Identiques sur les 3 nœuds)
+```yaml
+cluster_name: 'VPDFCluster'
+endpoint_snitch: GossipingPropertyFileSnitch
 
-Paramètres critiques par nœud (doivent être **l’IP LAN** de la machine) :
+seed_provider:
+  - class_name: org.apache.cassandra.locator.SimpleSeedProvider
+    parameters:
+      # On met les 2 premiers noeuds comme référents (Seeds)
+      - seeds: "192.168.150.123,192.168.150.107"
+```
 
-- `listen_address: <IP_LAN_DU_NOEUD>`
-- `broadcast_address: <IP_LAN_DU_NOEUD>`
-- `rpc_address: 0.0.0.0` (ou IP LAN)
-- `broadcast_rpc_address: <IP_LAN_DU_NOEUD>`
+### B. Paramètres Spécifiques (À adapter selon l'IP de la machine)
+*Remplacez `<IP_DE_CETTE_MACHINE>` par l'adresse IP (192.168.150.x) de la machine que vous configurez.*
 
-DC/Rack (si vous utilisez `GossipingPropertyFileSnitch`) :
+```yaml
+listen_address: <IP_DE_CETTE_MACHINE>
+rpc_address: <IP_DE_CETTE_MACHINE>
+broadcast_rpc_address: <IP_DE_CETTE_MACHINE>
+```
 
-- Fichier (souvent) `/etc/cassandra/cassandra-rackdc.properties`
-  - `dc=datacenter1`
-  - `rack=rackX` (par exemple `rack1`…`rack6`)
+---
 
-## Démarrage (ordre conseillé)
+## 🏷️ 3. Datacenter et Rack (`cassandra-rackdc.properties`)
 
-1. Démarrer les **seeds** en premier.
-2. Démarrer les autres nœuds ensuite.
-3. Sur un seed, vérifier :
-   - `nodetool status` → tous les nœuds en **UN** dans `datacenter1`
+Puisque nous utilisons `GossipingPropertyFileSnitch`, sur les 3 machines, ouvrez le fichier `cassandra-rackdc.properties` (dans le répertoire conf) et mettez :
 
-## Schéma + keyspace (RF=3)
+```properties
+dc=dc1
+rack=rack1
+```
 
-Le script `cassandra/init.sql` du repo contient :
+---
 
-- création du keyspace `vpdf` en `NetworkTopologyStrategy` avec `datacenter1: 3`
-- création des tables
+## 🚀 4. Démarrage (Ordre très important !)
 
-À exécuter **une seule fois** (depuis un nœud) avec `cqlsh` sur le cluster natif, puis le schéma se propage.
+1. **Allumez le Nœud 1 (Seed 123)** et attendez 1 minute.
+   ```bash
+   systemctl start cassandra
+   # ou bin/cassandra -f
+   ```
+2. **Allumez le Nœud 2 (Seed 107)** et attendez 1 minute.
+3. **Allumez le Nœud 3 (102)**.
+4. Sur n'importe quelle machine, lancez `nodetool status` pour vérifier. Vous devriez voir `UN` (Up/Normal) sur les 3 IPs :
+   ```
+   Datacenter: dc1
+   ================
+   Status=Up/Down | State=Normal/Leaving/Joining/Moving
+   --  Address           Load       Tokens
+   UN  192.168.150.123   ...
+   UN  192.168.150.107   ...
+   UN  192.168.150.102   ...
+   ```
 
-## Côté application (Spring Boot)
+---
 
-Dans `vpdf-backend/src/main/resources/application.yml`, par défaut l’application vise le cluster natif via les 3 seeds.
+## 💻 5. Configuration Côté Application (Spring Boot)
 
-- `spring.cassandra.contact-points` (par défaut) : `192.168.150.123,192.168.150.107,192.168.150.102`
-- `spring.cassandra.local-datacenter` : `datacenter1`
-- cohérence recommandée : `LOCAL_QUORUM`
-
-Pour le mode docker-compose local, lancer avec le profil `docker` (déjà activé dans `docker-compose.yml`).
-
+Une fois les 3 nœuds "Up/Normal", l'application `vpdf-backend` configurée dans `application.yml` avec :
+```yaml
+spring.cassandra.contact-points: 192.168.150.123,192.168.150.107,192.168.150.102
+spring.cassandra.local-datacenter: dc1
+```
+se connectera toute seule au cluster !
