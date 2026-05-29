@@ -31,7 +31,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8080
+      # Dans Docker, "localhost" = le conteneur lui-même. On vise le service backend via son nom Docker.
+      NEXT_PUBLIC_API_URL: http://vpdf-backend:8080
     networks: [vpdf-net]
     depends_on: [vpdf-backend]
 

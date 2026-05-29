@@ -28,7 +28,7 @@ spring:
       on-profile: docker
   cassandra:
     # Profil docker/local : cluster Cassandra lancé via docker-compose (noms DNS du réseau Docker).
-    contact-points: ${SPRING_CASSANDRA_CONTACT_POINTS:cassandra-node1,cassandra-node2,cassandra-node3}
+    contact-points: ${SPRING_CASSANDRA_CONTACT_POINTS:192.168.150.123,192.168.150.107,192.168.150.102}
     port: ${SPRING_CASSANDRA_PORT:9042}
     keyspace-name: ${SPRING_CASSANDRA_KEYSPACE_NAME:ventespleindefoin}
     local-datacenter: ${SPRING_CASSANDRA_LOCAL_DATACENTER:dc1}
